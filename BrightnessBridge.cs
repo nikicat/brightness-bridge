@@ -77,14 +77,19 @@ static class Program {
         try { File.AppendAllText(logPath, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff") + " " + msg + Environment.NewLine); } catch { }
     }
 
-    // Hidden message-only window that receives WM_POWERBROADCAST for the brightness setting.
+    // Invisible top-level window that receives WM_POWERBROADCAST for the brightness setting.
+    // Top-level rather than message-only so installers and Restart Manager can close it with WM_CLOSE.
     class PowerWindow : NativeWindow {
+        const int WM_CLOSE = 0x0010;
+        const int WM_QUERYENDSESSION = 0x0011;
+        const int WM_ENDSESSION = 0x0016;
         const int WM_POWERBROADCAST = 0x0218;
         const int PBT_POWERSETTINGCHANGE = 0x8013;
+        const int WS_EX_TOOLWINDOW = 0x00000080;
         IntPtr notifyHandle;
 
         public PowerWindow() {
-            CreateHandle(new CreateParams { Parent = new IntPtr(-3) }); // HWND_MESSAGE
+            CreateHandle(new CreateParams { Caption = "BrightnessBridge", ExStyle = WS_EX_TOOLWINDOW });
             Guid setting = VIDEONORMALLEVEL;
             notifyHandle = Native.RegisterPowerSettingNotification(Handle, ref setting, 0); // DEVICE_NOTIFY_WINDOW_HANDLE
             Log(notifyHandle == IntPtr.Zero ? "RegisterPowerSettingNotification FAILED" : "subscribed to brightness changes");
@@ -100,6 +105,15 @@ static class Program {
                     Request(value);
                 }
                 m.Result = new IntPtr(1);
+                return;
+            }
+            if (m.Msg == WM_QUERYENDSESSION) {
+                m.Result = new IntPtr(1);
+                return;
+            }
+            if (m.Msg == WM_CLOSE || (m.Msg == WM_ENDSESSION && m.WParam != IntPtr.Zero)) {
+                Log("closing (message 0x" + m.Msg.ToString("X") + ")");
+                Application.ExitThread();
                 return;
             }
             base.WndProc(ref m);

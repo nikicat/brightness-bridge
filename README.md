@@ -17,24 +17,50 @@ It runs per user at sign-in, not as a Windows service. Services run in session 0
 
 ## Requirements
 
-- Windows 10 or 11 with .NET Framework 4.x (preinstalled). The install script compiles the helper with the C# compiler that ships with .NET Framework, so you don't need an SDK.
+- Windows 10 or 11. The helper uses .NET Framework 4.8, which comes with both.
 - A monitor with DDC/CI enabled. Many monitors have a DDC/CI toggle in their on-screen menu, and it is sometimes off by default.
 
 ## Install
 
+Download `BrightnessBridge-<version>.msi` from [Releases](https://github.com/nikicat/brightness-bridge/releases/latest) and run it. Installation is per user and doesn't need administrator rights. The installer:
+
+- installs to `%LOCALAPPDATA%\Programs\BrightnessBridge`
+- registers the helper to start at sign-in (`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`)
+- starts the helper right away, so the brightness keys work immediately
+
+The MSI isn't code-signed, so Windows SmartScreen may show "Windows protected your PC". Click **More info → Run anyway**.
+
+To uninstall, use **Settings → Apps → Installed apps → BrightnessBridge → Uninstall**. Installing a newer MSI upgrades in place: the running helper is closed, replaced and restarted.
+
+Silent install and uninstall:
+
 ```powershell
-powershell -ExecutionPolicy Bypass -File install.ps1
+msiexec /i BrightnessBridge-<version>.msi /qn
+msiexec /x BrightnessBridge-<version>.msi /qn
 ```
 
-This builds `BrightnessBridge.exe` into `%LOCALAPPDATA%\Programs\BrightnessBridge`, registers it to start at sign-in (`HKCU\Software\Microsoft\Windows\CurrentVersion\Run`) and starts it. Run the script again after changing the source to rebuild and restart the helper.
+## Building
 
-## Uninstall
+### MSI
+
+Requires the .NET SDK 6 or later. The WiX Toolset is downloaded from NuGet automatically.
 
 ```powershell
+dotnet build installer -c Release -p:Version=1.2.3
+```
+
+The package is written to `installer\bin\Release\BrightnessBridge.msi`. Pushing a `v*` tag makes GitHub Actions build the MSI and publish it as a release.
+
+### Without the SDK
+
+`install.ps1` compiles the helper with the C# compiler that ships with .NET Framework and installs it to the same location and startup entry as the MSI. It's useful for quick local iteration:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File install.ps1
 powershell -ExecutionPolicy Bypass -File uninstall.ps1
 ```
 
-This stops the helper, removes the startup entry and deletes the installed files.
+Don't mix the two install methods. If the MSI is installed, uninstall it from Settings instead of running `uninstall.ps1`.
 
 ## Troubleshooting
 

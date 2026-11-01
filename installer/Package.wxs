@@ -1,0 +1,50 @@
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <!-- Per-user package: no elevation, installs under %LOCALAPPDATA%\Programs and starts at sign-in via HKCU Run. -->
+  <Package Name="BrightnessBridge"
+           Manufacturer="Nikolay Bryskin"
+           Version="$(var.Version)"
+           UpgradeCode="2E5ACF8D-7A34-4537-A359-22BAB1BCEF41"
+           Scope="perUser">
+
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of BrightnessBridge is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/nikicat/brightness-bridge" />
+
+    <ui:WixUI Id="WixUI_Minimal" />
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="LocalProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="BrightnessBridge" />
+      </Directory>
+    </StandardDirectory>
+
+    <Component Id="MainComponent" Directory="INSTALLFOLDER" Guid="13151E55-E140-48C1-9B5E-B29780FA02F3">
+      <File Id="BrightnessBridgeExe" Source="$(var.BrightnessBridge.TargetPath)" KeyPath="no" />
+      <!-- Per-user components need an HKCU key path. -->
+      <RegistryValue Root="HKCU" Key="Software\BrightnessBridge" Name="InstallDir"
+                     Type="string" Value="[INSTALLFOLDER]" KeyPath="yes" />
+      <RegistryValue Root="HKCU" Key="Software\Microsoft\Windows\CurrentVersion\Run" Name="BrightnessBridge"
+                     Type="string" Value="&quot;[#BrightnessBridgeExe]&quot;" />
+      <RemoveFile Id="RemoveLogs" Name="*.log" On="uninstall" />
+      <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
+      <RemoveFolder Id="RemoveLocalProgramsFolder" Directory="LocalProgramsFolder" On="uninstall" />
+    </Component>
+
+    <!-- Stop the running helper before files are replaced or removed. -->
+    <util:CloseApplication Id="CloseBrightnessBridge" Target="BrightnessBridge.exe"
+                           CloseMessage="yes" TerminateProcess="1" RebootPrompt="no" />
+
+    <!-- Start it right away so brightness keys work without signing out. -->
+    <CustomAction Id="LaunchBrightnessBridge" FileRef="BrightnessBridgeExe" ExeCommand="" Return="asyncNoWait" />
+    <InstallExecuteSequence>
+      <Custom Action="LaunchBrightnessBridge" After="InstallFinalize" Condition="NOT (REMOVE~=&quot;ALL&quot;)" />
+    </InstallExecuteSequence>
+
+  </Package>
+</Wix>
