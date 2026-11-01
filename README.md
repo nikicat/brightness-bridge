@@ -54,3 +54,7 @@ Get-Process BrightnessBridge -ErrorAction SilentlyContinue | Stop-Process
 - On the sign-in screen, before anyone has signed in, the keys don't change brightness.
 - All DDC/CI monitors get the same brightness level.
 - Changes made with the monitor's own buttons aren't reflected back to the Windows slider.
+
+## License
+
+[MIT](LICENSE)
